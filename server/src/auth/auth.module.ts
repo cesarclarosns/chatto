@@ -5,7 +5,7 @@ import {
   DynamicModule,
 } from '@nestjs/common';
 
-import { AuthMiddleware } from './auth.middleware';
+// import { AuthMiddleware } from './auth.middleware';
 import { ConfigInjectionToken, AuthModuleConfig } from './config.interface';
 
 @Module({
@@ -15,7 +15,8 @@ import { ConfigInjectionToken, AuthModuleConfig } from './config.interface';
 })
 export class AuthModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(AuthMiddleware).forRoutes('*');
+    console.log({ consumer });
+    // consumer.apply(AuthMiddleware).forRoutes('*');
   }
 
   static forRoot({
