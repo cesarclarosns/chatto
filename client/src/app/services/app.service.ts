@@ -12,7 +12,7 @@ export class AppService {
         filter((evt): evt is VersionReadyEvent => evt.type === 'VERSION_READY')
       )
       .subscribe((evt) => {
-        console.log('Updating app!');
+        console.log('Updating app...');
         document.location.reload();
       });
   }
