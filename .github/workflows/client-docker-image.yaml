@@ -32,6 +32,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           platforms: linux/amd64,linux/arm/v8
+          context: client
           file: Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
