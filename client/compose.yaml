@@ -1,0 +1,8 @@
+version: "3.8"
+
+services:
+  chatto:
+    container_name: chatto
+    build:
+      context: .
+      dockerfile: Dockerfile

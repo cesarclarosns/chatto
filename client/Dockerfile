@@ -1,4 +1,4 @@
-FROM node:20.6.0-alpine3.18 AS build
+FROM node:20.6.1-alpine3.17 AS build
 WORKDIR /app
 RUN npm install -g pnpm
 COPY . .
