@@ -1,7 +1,19 @@
 version: "3.8"
 
 services:
-  chattodb:
+  chatto:
+    image: cesarclarosns/chatto
+    # build:
+    #   context: ../client
+    ports:
+      - 80:80
+  chatto-server:
+    image: cesarclarosns/chatto-server
+    # build:
+    #   context: ../server
+    ports:
+      - 3000:3000
+  db:
     image: timescale/timescaledb:latest-pg15
     container_name: timescaledb_container
     environment:
@@ -11,7 +23,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - chattodb_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql/data
 
 volumes:
-  chattodb_data:
+  db_data:
