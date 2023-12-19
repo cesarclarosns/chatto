@@ -1,4 +1,4 @@
-import { createUserDtoSchema } from '@/features/users/dto/create-user.dto'
+import { createUserDtoSchema } from '@features/users/dto/create-user.dto'
 import { z } from 'zod'
 
 export const signInDtoSchema = createUserDtoSchema.pick({
