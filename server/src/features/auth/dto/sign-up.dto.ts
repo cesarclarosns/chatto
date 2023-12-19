@@ -1,24 +1,10 @@
-import {
-  IsEmail,
-  IsNotEmpty,
-  IsString,
-  IsStrongPassword,
-} from 'class-validator'
+import { z } from 'zod'
+import { createUserDtoSchema } from '@features/users/dto/create-user.dto'
 
-export class SignUpDto {
-  @IsEmail()
-  @IsNotEmpty()
-  email: string
+export const signUpDtoSchema = createUserDtoSchema.pick({
+  email: true,
+  username: true,
+  password: true,
+})
 
-  @IsString()
-  @IsNotEmpty()
-  username: string
-
-  @IsStrongPassword()
-  @IsNotEmpty()
-  password: string
-
-  @IsString()
-  @IsNotEmpty()
-  displayName: string
-}
+export type TSignUpDto = z.infer<typeof signUpDtoSchema>

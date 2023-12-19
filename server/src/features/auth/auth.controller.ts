@@ -1,101 +1,87 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Patch,
-  Post,
-  Query,
-  Req,
-  Res,
-  UseGuards,
-} from '@nestjs/common'
-import { Request, Response } from 'express'
-import { COOKIES } from '@features/auth/auth.constants'
-import { AuthService } from '@features/auth/auth.service'
-import { ResetPasswordDto } from '@features/auth/dto/reset-password.dto'
-import { ResetPasswordCallbackDto } from '@features/auth/dto/reset-password-callback.dto'
-import { ResetPasswordCallbackQueryDto } from '@features/auth/dto/reset-password-callback-query.dto'
-import { SignInDto } from '@features/auth/dto/sign-in.dto'
-import { SignUpDto } from '@features/auth/dto/sign-up.dto'
-import { AccessTokenGuard, RefreshTokenGuard } from '@features/auth/guards'
-import { Public } from './decorators/public.decorator'
+import { Router } from 'express'
+import { AuthService, authService } from './auth.service'
 
-@Controller('auth')
+import { StatusCodes } from 'http-status-codes'
+import { COOKIES } from './auth.constants'
+import { CONFIG } from '@config'
+
+import { asyncHandler } from '@libs/async-handler'
+import { signInDtoSchema } from './dto/sign-in.dto'
+import { signUpDtoSchema } from './dto/sign-up.dto'
+import { refreshTokenGuard } from './guards/refresh-token.guard'
+import { googleGuard } from './guards/google.guard'
+
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  router: Router
+  authService: AuthService
 
-  @Public()
-  @Post('sign-in')
-  @HttpCode(HttpStatus.OK)
-  async signIn(
-    @Body() signInDto: SignInDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  constructor() {
+    this.router = Router()
+    this.authService = authService
+
+    this.router.post('/sign-in', this.signIn)
+    this.router.post('/sign-up', this.signUp)
+    this.router.post('/sign-out', refreshTokenGuard, this.signOut)
+    this.router.get('/refresh', refreshTokenGuard, this.refresh)
+    this.router.post('/reset-password', this.resetPassword)
+    this.router.get('/reset-password/callback', this.resetPasswordCallback)
+    this.router.post('/google', googleGuard)
+    this.router.post('/google/callback', googleGuard, this.googleCallback)
+  }
+
+  signIn = asyncHandler(async (req, res) => {
+    const signInDto = signInDtoSchema.parse(req.body)
     const tokens = await this.authService.signIn(signInDto)
-    res.cookie(COOKIES.REFRESH_TOKEN, tokens.refreshToken, { httpOnly: true })
 
-    return { accessToken: tokens.accessToken }
-  }
+    res.cookie(COOKIES.refreshToken, tokens.refreshToken, { httpOnly: true })
+    res.cookie(COOKIES.persist, true)
+    res.status(StatusCodes.OK).send({ accessToken: tokens.accessToken })
+  })
 
-  @Public()
-  @Post('sign-up')
-  @HttpCode(HttpStatus.CREATED)
-  signUp(@Body() signUpDto: SignUpDto) {
-    return this.authService.signUp(signUpDto)
-  }
+  signUp = asyncHandler(async (req, res) => {
+    const signUpDto = signUpDtoSchema.parse(req.body)
+    await this.authService.signUp(signUpDto)
 
-  @Post('sign-out')
-  @HttpCode(HttpStatus.OK)
-  @UseGuards(AccessTokenGuard)
-  signOut(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie(COOKIES.REFRESH_TOKEN, { httpOnly: true })
-    return {}
-  }
+    res.status(StatusCodes.OK).send()
+  })
 
-  @Public()
-  @Post('reset-password')
-  @HttpCode(HttpStatus.OK)
-  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    await this.authService.resetPassword(resetPasswordDto)
-    return
-  }
+  signOut = asyncHandler(async (req, res) => {
+    res.clearCookie(COOKIES.refreshToken, { httpOnly: true })
+    res.clearCookie(COOKIES.persist)
+    res.status(StatusCodes.OK).send()
+  })
 
-  @Public()
-  @Patch('reset-password/callback')
-  @HttpCode(HttpStatus.OK)
-  async resetPasswordCallback(
-    @Body() resetPasswordCallbackDto: ResetPasswordCallbackDto,
-    @Query() query: ResetPasswordCallbackQueryDto,
-  ) {
-    return await this.authService.resetPasswordCallback(
-      resetPasswordCallbackDto,
-      query.token,
-    )
-  }
+  refresh = asyncHandler(async (req, res) => {
+    const user_id = req.user.sub
+    const tokens = await this.authService.refreshTokens(user_id)
 
-  @Get('refresh')
-  @UseGuards(RefreshTokenGuard)
-  async refreshTokens(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const userId = req.user.sub
-    const email = req.user.email
+    res.cookie(COOKIES.refreshToken, tokens.refreshToken, { httpOnly: true })
+    res.status(StatusCodes.OK).send({ accessToken: tokens.accessToken })
+  })
 
-    const tokens = await this.authService.refreshTokens({ email, userId })
+  resetPassword = asyncHandler(async (req, res) => {
+    await this.authService.resetPassword(req.body)
+    res.status(StatusCodes.OK).send()
+  })
 
-    res.cookie(COOKIES.REFRESH_TOKEN, tokens.refreshToken, { httpOnly: true })
+  resetPasswordCallback = asyncHandler(async (req, res) => {
+    const { token } = req.query as { token: string }
+    await this.authService.resetPasswordCallback(req.body, token)
+    res.status(StatusCodes.OK).send()
+  })
 
-    return { accessToken: tokens.accessToken }
-  }
+  googleCallback = asyncHandler(async (req, res) => {
+    try {
+      const { sub: user_id } = req.user
+      const tokens = await authService.getTokens(user_id)
 
-  @Public()
-  @Get('google')
-  async google() {}
-
-  @Public()
-  @Get('google/callback')
-  async googleCallback() {}
+      res.cookie(COOKIES.persist, true)
+      res.cookie(COOKIES.refreshToken, tokens.refreshToken, { httpOnly: true })
+    } catch (err) {
+    } finally {
+      res.redirect(CONFIG.app.appDomain)
+    }
+  })
 }
+
+export const authController = new AuthController()

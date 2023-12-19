@@ -1,4 +1,3 @@
-import { AccessTokenStrategy } from './access.token.strategy'
-import { RefreshTokenStrategy } from './refresh.token.strategy'
-
-export { AccessTokenStrategy, RefreshTokenStrategy }
+import './access-token.strategy'
+import './refresh-token.strategy'
+import './google.strategy'

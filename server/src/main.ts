@@ -1,26 +1,14 @@
-import { ValidationPipe } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
-import { NestFactory } from '@nestjs/core'
-import * as cookieParser from 'cookie-parser'
-import helmet from 'helmet'
-import { AppModule } from '@app/app.module'
-import { CONFIG_VALUES } from '@app/config/configuration'
-import { MongooseExceptionFilter } from '@libs/filters/mongoose-exception.filter'
-import { SocketIoAdapter } from './libs/adapters/socket-io.adapter'
+import { httpServer } from './app'
+import { connectDatabase } from './db'
+// import { connectCache } from './cache'
+import { CONFIG } from '@config/index'
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { cors: true })
-  const configService = app.get(ConfigService)
-
-  // Set up
-  app.setGlobalPrefix('/api')
-  app.useGlobalPipes(new ValidationPipe())
-  app.useGlobalFilters(new MongooseExceptionFilter())
-  app.useWebSocketAdapter(new SocketIoAdapter(app, configService))
-  app.use(helmet())
-  app.use(cookieParser())
-
-  const port = configService.getOrThrow<number>(CONFIG_VALUES.app.listeningPort)
-  await app.listen(port)
+const bootstrap = async () => {
+  await connectDatabase()
+  // await connectCache()
+  httpServer.listen(CONFIG.app.listeningPort, () => {
+    console.log(`Server listening on port ${CONFIG.app.listeningPort}`)
+  })
 }
+
 bootstrap()

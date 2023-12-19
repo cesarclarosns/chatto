@@ -1,9 +1,6 @@
-import { PartialType } from '@nestjs/mapped-types'
-import { IsDateString, IsOptional } from 'class-validator'
-import { CreateUserDto } from './create-user.dto'
+import { z } from 'zod'
+import { createUserDtoSchema } from './create-user.dto'
 
-export class UpdateUserDto extends PartialType(CreateUserDto) {
-  @IsOptional()
-  @IsDateString()
-  lastActive?: string
-}
+export const updateUserDtoSchema = createUserDtoSchema.partial()
+
+export type TUpdateUserDto = z.infer<typeof updateUserDtoSchema>

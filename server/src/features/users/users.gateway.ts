@@ -1,61 +1,26 @@
-import {
-  ConnectedSocket,
-  MessageBody,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
-  SubscribeMessage,
-  WebSocketGateway,
-  WebSocketServer,
-} from '@nestjs/websockets'
-import {
-  IClientToServerEvents,
-  ICustomServer,
-  ICustomSocket,
-} from '@app/common/interfaces/socket.io'
-import { GetStatusEventDto } from '@features/users/dto/get-status-event.dto'
-import { UsersService } from '@features/users/users.service'
+import { io } from '@app'
+import { IGateway } from '@common/interfaces/gateway.interface'
+import { ICustomServer, ICustomSocket } from '@common/interfaces/socket'
 
-@WebSocketGateway()
-export class UsersGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  @WebSocketServer() server: ICustomServer
+export class UsersGateway implements IGateway {
+  readonly server: ICustomServer
 
-  constructor(private usersService: UsersService) {}
-
-  handleDisconnect(socket: ICustomSocket) {
-    console.log({ clientId: socket.id })
+  constructor() {
+    this.server = io
   }
 
-  handleConnection(socket: ICustomSocket) {
-    const userChannel = this.usersService.getUserChannel(socket.data.sub)
-    socket.join(userChannel)
+  init = (socket: ICustomSocket) => {
+    this.handleConnect(socket)
   }
 
-  @SubscribeMessage<keyof IClientToServerEvents>('users/get-status')
-  async handleMessage(
-    @ConnectedSocket() socket: ICustomSocket,
-    @MessageBody() ev: GetStatusEventDto,
-  ): Promise<
-    Parameters<Parameters<IClientToServerEvents['users/get-status']>[1]>[0]
-  > {
-    const offline = []
-    const online = []
-
-    await Promise.all(
-      ev.userIds.map(async (userId) => {
-        const userChannel = this.usersService.getUserChannel(userId)
-        const sockets = await this.server.in(userChannel).fetchSockets()
-        if (!sockets.length) return offline.push(userId)
-        return online.push(userId)
-      }),
-    )
-
-    return { payload: { offline, online }, status: 'success' }
+  handleConnect = async (socket: ICustomSocket) => {
+    console.log(socket)
+    //Add user to online set
   }
 
-  @SubscribeMessage<keyof IClientToServerEvents>('users/heartbeat')
-  async handleHearbeat(@ConnectedSocket() socket: ICustomSocket) {
-    await this.usersService.update(socket.data.sub, {
-      lastActive: new Date(Date.now()).toISOString(),
-    })
+  handleDisconnect = async (socket: ICustomSocket) => {
+    console.log(socket)
   }
 }
+
+export const usersGateway = new UsersGateway()

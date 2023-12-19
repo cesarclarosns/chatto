@@ -1,8 +1,7 @@
-import { ApiProperty } from '@nestjs/swagger'
-import { IsEmail } from 'class-validator'
+import { z } from 'zod'
 
-export class ResetPasswordDto {
-  @IsEmail()
-  @ApiProperty()
-  email: string
-}
+export const resetPasswordDtoSchema = z.object({
+  email: z.string().email(),
+})
+
+export type TResetPasswordDto = z.infer<typeof resetPasswordDtoSchema>

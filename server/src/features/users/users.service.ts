@@ -1,59 +1,58 @@
-import { Injectable } from '@nestjs/common'
-import { InjectModel } from '@nestjs/mongoose'
-import { Model } from 'mongoose'
-import { SocketService } from '@app/common/modules/socket/socket.service'
-import { CreateUserDto } from '@features/users/dto/create-user.dto'
-import { UpdateUserDto } from '@features/users/dto/update-user.dto'
-import { User, UserDocument } from '@features/users/schemas/user.schema'
+import { TCreateUserDto } from './dto/create-user.dto'
+import { TUpdateUserDto } from './dto/update-user.dto'
+import { TUserDocumentFilterQuery, userModel } from './models/user.model'
 
-@Injectable()
 export class UsersService {
-  constructor(
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
-    private socketService: SocketService,
-  ) {}
+  private readonly userModel: typeof userModel
 
-  async create(createUserDto: CreateUserDto) {
-    return await this.userModel.create(createUserDto)
+  constructor() {
+    this.userModel = userModel
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto) {
-    return await this.userModel.updateOne({ _id: id }, updateUserDto)
+  findOne = async (filter: TUserDocumentFilterQuery) => {
+    return await this.userModel.findOne(filter)
   }
 
-  async findAll() {
-    return await this.userModel.find({}, { password: 0 })
-  }
-
-  async findOneByEmail(email: string) {
-    return await this.userModel.findOne({ email })
-  }
-
-  async findOneByUsername(username: string) {
-    return await this.userModel.findOne({ username })
-  }
-
-  async findOneByGoogleId(googleId: string) {
-    return await this.userModel.findOne({ googleId })
-  }
-
-  async findOneById(id: string) {
+  findOneById = async (id: string) => {
     return await this.userModel.findById(id)
   }
 
-  async getProfileByUsername(username: string) {
-    return await this.userModel.findOne({ username }, { password: 0 })
+  findOneByEmail = async (email: string) => {
+    return await this.userModel.findOne({ email })
   }
 
-  async getOnlineUsers(): Promise<number> {
-    return new Set(
-      (await this.socketService.server.sockets.fetchSockets()).map(
-        (socket) => socket.data.sub,
-      ),
-    ).size
+  findOneByGoogleId = async (google_id: string) => {
+    return await this.userModel.findOne({ google_id })
   }
 
-  getUserChannel(userId: string) {
-    return `users:${userId}`
+  findOneUserProfileById = async (id: string) => {
+    return await this.userModel.findById(id, { password: 0, email: 0 })
+  }
+
+  findOneUserProfileByUsername = async (username: string) => {
+    return await this.userModel.findOne({ username }, { password: 0, email: 0 })
+  }
+
+  findOneUserInfoById = async (id: string) => {
+    return await this.userModel.findById(id)
+  }
+
+  findAll = async ({}: {
+    filter: TUserDocumentFilterQuery
+    limit: number
+    skip: number
+    sort: string
+  }) => {
+    return await this.userModel.find({})
+  }
+
+  update = async (id: string, updateUserDto: TUpdateUserDto) => {
+    return await this.userModel.updateOne({ _id: id }, { $set: updateUserDto })
+  }
+
+  create = async (createUserDto: TCreateUserDto) => {
+    return await this.userModel.create(createUserDto)
   }
 }
+
+export const usersService = new UsersService()

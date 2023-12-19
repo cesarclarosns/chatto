@@ -1,91 +1,119 @@
-import { UsePipes, ValidationPipe } from '@nestjs/common'
-import {
-  ConnectedSocket,
-  MessageBody,
-  OnGatewayDisconnect,
-  SubscribeMessage,
-  WebSocketGateway,
-  WebSocketServer,
-} from '@nestjs/websockets'
-import {
-  IClientToServerEvents,
-  ICustomServer,
-  ICustomSocket,
-} from '@app/common/interfaces/socket.io'
-import { FindRoomEventDto } from '@features/rooms/dto/find-room-event.dto'
-import { LeaveRoomEventDto } from '@features/rooms/dto/leave-room-event.dto'
-import { NewMessageEventDto } from '@features/rooms/dto/new-message-event.dto'
-import { UserTypingClientEventDto } from '@features/rooms/dto/user-typing-event.dto'
-import { RoomsService } from '@features/rooms/rooms.service'
+import { io } from '@app'
+import { IGateway } from '@common/interfaces/gateway.interface'
+import { ICustomServer, ICustomSocket } from '@common/interfaces/socket'
+import { RoomsService, roomsService } from './rooms.service'
+import { createRoomMessageDtoSchema } from './dto/create-room-message.dto'
 
-@WebSocketGateway()
-@UsePipes(new ValidationPipe())
-export class RoomsGateway implements OnGatewayDisconnect {
-  @WebSocketServer() server: ICustomServer
+export class RoomsGateway implements IGateway {
+  server: ICustomServer
+  roomsService: RoomsService
 
-  constructor(private roomsService: RoomsService) {}
-
-  async handleDisconnect(socket: ICustomSocket) {
-    //Somehow delete the rooms where the socket is a participant (using the socketId)
-    console.log('handleDisconnect', socket.id)
-    await this.roomsService.deleteRoomsBySocket(socket)
+  constructor() {
+    this.server = io
+    this.roomsService = roomsService
   }
 
-  @SubscribeMessage<keyof IClientToServerEvents>('rooms/room/find-room')
-  async handleFindRoom(
-    @ConnectedSocket() socket: ICustomSocket,
-    @MessageBody() ev: FindRoomEventDto,
-  ): Promise<
-    Parameters<Parameters<IClientToServerEvents['rooms/room/find-room']>[1]>[0]
-  > {
-    const { room, token } = await this.roomsService.handleFindRoom(socket, ev)
-    return { payload: { room, token }, status: 'success' }
+  init = (socket: ICustomSocket) => {
+    console.log('RoomsGateway connect', socket.id)
+
+    socket.on('disconnect', async () => {
+      console.log('RoomsGateway disconnect', socket.id)
+
+      await Promise.all(
+        [...socket.rooms].map(async (room) => {
+          if (room.includes('rooms:')) {
+            const room_id = room.replace('rooms:', '')
+            await this.leaveRoom(socket, room_id)
+          }
+        }),
+      )
+    })
+
+    socket.on('rooms/join-room', async (ev, cb) => {
+      try {
+        await this.joinRoom(socket, ev.room_id)
+
+        cb({ status: 'success' })
+      } catch (err) {
+        cb({ status: 'failed' })
+      }
+    })
+
+    socket.on('rooms/leave-room', async (ev, cb) => {
+      try {
+        await this.leaveRoom(socket, ev.room_id)
+
+        cb({ status: 'success' })
+      } catch (err) {
+        cb({ status: 'failed' })
+      }
+    })
+
+    socket.on('rooms/send-message', async (ev, cb) => {
+      try {
+        const createRoomMessageDto = createRoomMessageDtoSchema.parse({
+          ...ev,
+          user_id: socket.data.sub,
+        })
+        const message =
+          await this.roomsService.createRoomMessage(createRoomMessageDto)
+
+        socket
+          .to(`rooms:${ev.room_id}`)
+          .emit('rooms/send-message', message.toJSON())
+
+        cb({ status: 'success' })
+      } catch (err) {
+        cb({ status: 'failed' })
+      }
+    })
+
+    socket.on('rooms/user-typing', (ev, cb) => {
+      try {
+        socket
+          .to(`rooms:${ev.room_id}`)
+          .emit('rooms/user-typing', { ...ev, user_id: socket.data.sub })
+
+        cb({ status: 'success' })
+      } catch (err) {
+        cb({ status: 'failed' })
+      }
+    })
   }
 
-  @SubscribeMessage<keyof IClientToServerEvents>('rooms/room/new-message')
-  async handleNewMessage(
-    @ConnectedSocket() socket: ICustomSocket,
-    @MessageBody() ev: NewMessageEventDto,
-  ) {
+  joinRoom = async (socket: ICustomSocket, room_id: string) => {
+    socket.join(`rooms:${room_id}`)
+
+    const participants = [
+      ...new Set(
+        (await this.server.in(`rooms:${room_id}`).fetchSockets()).map(
+          (socket) => socket.data.sub,
+        ),
+      ),
+    ]
+    await this.roomsService.update(room_id, { participants })
+
     socket
-      .to(this.roomsService.getRoomChannel(ev.roomId))
-      .emit('rooms/room/new-message', {
-        ...ev,
-        userId: socket.data.sub,
-      })
+      .to(`rooms:${room_id}`)
+      .emit('rooms/join-room', { room_id, user_id: socket.data.sub })
   }
 
-  @SubscribeMessage<keyof IClientToServerEvents>('rooms/room/leave-room')
-  async handleLeaveRoom(
-    @ConnectedSocket() socket: ICustomSocket,
-    @MessageBody() ev: LeaveRoomEventDto,
-  ) {
-    await this.roomsService.handleLeaveRoom(socket, ev)
-  }
+  leaveRoom = async (socket: ICustomSocket, room_id: string) => {
+    socket.leave(`rooms:${room_id}`)
 
-  @SubscribeMessage<keyof IClientToServerEvents>('rooms/room/user-typing')
-  async handleUserTyping(
-    @ConnectedSocket() socket: ICustomSocket,
-    @MessageBody() ev: UserTypingClientEventDto,
-  ) {
+    const participants = [
+      ...new Set(
+        (await this.server.in(`rooms:${room_id}`).fetchSockets()).map(
+          (socket) => socket.data.sub,
+        ),
+      ),
+    ]
+    await this.roomsService.update(room_id, { participants })
+
     socket
-      .to(this.roomsService.getRoomChannel(ev.roomId))
-      .emit('rooms/room/user-typing', { ...ev, userId: socket.data.sub })
-  }
-
-  @SubscribeMessage<keyof IClientToServerEvents>('rooms/room/get-status')
-  async handleGetStatus(
-    @ConnectedSocket() socket: ICustomSocket,
-    @MessageBody() ev: UserTypingClientEventDto,
-  ): Promise<
-    Parameters<Parameters<IClientToServerEvents['rooms/room/get-status']>[1]>[0]
-  > {
-    const status = await this.roomsService.handleGetStatus(socket, ev)
-    return {
-      payload: {
-        status,
-      },
-      status: 'success',
-    }
+      .to(`rooms:${room_id}`)
+      .emit('rooms/leave-room', { room_id, user_id: socket.data.sub })
   }
 }
+
+export const roomsGateway = new RoomsGateway()

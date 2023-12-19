@@ -1,22 +1,21 @@
-import { IsEmail, IsOptional, IsString } from 'class-validator'
+import { z } from 'zod'
+import { EUserStatus } from '../models/user.model'
 
-export class CreateUserDto {
-  @IsOptional()
-  @IsEmail()
-  email: string
+export const createUserProfileDtoSchema = z.object({
+  displayName: z.string(),
+  bio: z.string(),
+})
 
-  @IsOptional()
-  @IsString()
-  username: string
+export const createUserSettingsDtoSchema = z.object({
+  status: z.nativeEnum(EUserStatus),
+})
 
-  @IsString()
-  password: string
+export const createUserDtoSchema = z.object({
+  email: z.string().email(),
+  username: z.string().min(3),
+  password: z.string().min(10),
+  profile: createUserProfileDtoSchema,
+  settings: createUserSettingsDtoSchema,
+})
 
-  @IsOptional()
-  @IsString()
-  displayName: string
-
-  @IsOptional()
-  @IsString()
-  bio?: string
-}
+export type TCreateUserDto = z.infer<typeof createUserDtoSchema>
