@@ -37,6 +37,7 @@ export const httpServer = createServer(app)
 export const io = new Server<ICustomServer>(httpServer, {
   path: CONFIG.app.apiSocketPath,
   cors: corsOptions,
+  transports: ['websocket'],
 })
 
 io.use(socketAccessTokenGuard)
