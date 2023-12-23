@@ -1,29 +1,74 @@
-import { z } from 'zod'
-import { EUserStatus } from '../models/user.model'
-import { isValidObjectId } from 'mongoose'
+import { IsObjectId } from '@common/decorators/is-object-id.decorator';
+import { Type } from 'class-transformer';
+import {
+  IsEmail,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
 
-export const createUserProfileDtoSchema = z.object({
-  displayName: z.string(),
-  bio: z.string(),
-})
+import { EUserStatus } from '../entities/user.entity';
 
-export const createUserSettingsDtoSchema = z.object({
-  status: z.nativeEnum(EUserStatus),
-})
+class Profile {
+  @IsString()
+  @IsNotEmpty()
+  @IsOptional()
+  displayName?: string;
 
-export const createUserDtoSchema = z.object({
-  _id: z
-    .string()
-    .refine((value) => isValidObjectId(value), {
-      message: 'String must be a valid ObjectId',
-    })
-    .optional(),
-  google_id: z.string().min(1).optional(),
-  email: z.string().email(),
-  username: z.string().min(3),
-  password: z.string().min(10),
-  profile: createUserProfileDtoSchema.optional(),
-  settings: createUserSettingsDtoSchema.optional(),
-})
+  @IsString()
+  @IsNotEmpty()
+  @IsOptional()
+  bio?: string;
 
-export type TCreateUserDto = z.infer<typeof createUserDtoSchema>
+  @IsString()
+  @IsNotEmpty()
+  @IsOptional()
+  profilePicture?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @IsOptional()
+  coverPicture?: string;
+}
+
+class Settings {
+  @IsEnum(EUserStatus)
+  @IsOptional()
+  status?: EUserStatus;
+}
+
+export class CreateUserDto {
+  @IsObjectId()
+  @IsOptional()
+  _id?: string;
+
+  @IsEmail()
+  @IsOptional()
+  email?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @IsOptional()
+  password?: string;
+
+  @IsString()
+  @MinLength(3)
+  username: string;
+
+  @IsString()
+  @IsOptional()
+  google_id?: string;
+
+  @ValidateNested()
+  @Type(() => Profile)
+  @IsOptional()
+  profile?: Profile;
+
+  @ValidateNested()
+  @Type(() => Settings)
+  @IsOptional()
+  settings?: Settings;
+}

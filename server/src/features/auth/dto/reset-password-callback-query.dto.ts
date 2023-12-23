@@ -1,9 +1,9 @@
-import { z } from 'zod'
+import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsString } from 'class-validator';
 
-export const resetPasswordCallbackQueryDtoSchema = z.object({
-  token: z.string().min(1),
-})
-
-export type TResetPasswordCallbackQueryDto = z.infer<
-  typeof resetPasswordCallbackQueryDtoSchema
->
+export class ResetPasswordCallbackQueryDto {
+  @IsString()
+  @IsNotEmpty()
+  @ApiProperty()
+  token: string;
+}

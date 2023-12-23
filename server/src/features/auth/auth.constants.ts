@@ -1,15 +1,20 @@
-export const COOKIES = {
-  persist: 'persist',
-  refreshToken: 'refreshToken',
-}
-
-export const TOKENS = {
-  acccessToken: 'accessToken',
-  refreshToken: 'refreshToken',
-}
+export const AUTH_COOKIES = {
+  PERSIST: 'persist',
+  REFRESH_TOKEN: 'refreshToken',
+};
 
 export const AUTH_STRATEGIES = {
-  google: 'google',
+  accessToken: 'accessToken',
+  googleOAuth: 'googleOAuth',
+  refreshToken: 'refreshToken',
+};
+
+export const AUTH_TOKENS = {
   accessToken: 'accessToken',
   refreshToken: 'refreshToken',
-}
+};
+
+export const AUTH_EVENTS = {
+  resetPassword: 'resetPassword',
+  signUp: 'signUp',
+};

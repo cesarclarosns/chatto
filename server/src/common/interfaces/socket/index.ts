@@ -1,105 +1,105 @@
-import { Server, Socket } from 'socket.io'
-import { TTokenPayload } from '@features/auth/auth.types'
+import { TTokenPayload } from '@features/auth/auth.types';
+import { Server, Socket } from 'socket.io';
 
 export interface IDefaultCallbackResponse {
-  status: 'success' | 'failed'
-  message?: string | string[]
-  errors?: { [key: string]: string | string[] }
+  status: 'success' | 'failed';
+  message?: string | string[];
+  errors?: { [key: string]: string | string[] };
 }
 
 export interface IClientToServerEvents {
   'chats/send-message': (
     ev: {
-      chat_id: string
-      message: undefined
+      chat_id: string;
+      message: undefined;
     },
     cb: (response: IDefaultCallbackResponse) => void,
-  ) => void
+  ) => void;
 
   'chats/user-typing': (
     ev: {
-      chat_id: string
+      chat_id: string;
     },
     cb: (response: IDefaultCallbackResponse) => void,
-  ) => void
+  ) => void;
 
   'chats/read-message': (
     ev: {
-      chat_id: string
-      message_id: string
+      chat_id: string;
+      message_id: string;
     },
     cb: (response: IDefaultCallbackResponse) => void,
-  ) => void
+  ) => void;
 
   'rooms/join-room': (
     ev: {
-      room_id: string
+      room_id: string;
     },
     cb: (response: IDefaultCallbackResponse) => void,
-  ) => void
+  ) => void;
 
   'rooms/leave-room': (
     ev: {
-      room_id: string
+      room_id: string;
     },
     cb: (response: IDefaultCallbackResponse) => void,
-  ) => void
+  ) => void;
 
   'rooms/send-message': (
     ev: {
-      room_id: string
-      content: string
+      room_id: string;
+      content: string;
     },
     cb: (response: IDefaultCallbackResponse) => void,
-  ) => void
+  ) => void;
 
   'rooms/user-typing': (
     ev: {
-      room_id: string
+      room_id: string;
     },
     cb: (response: IDefaultCallbackResponse) => void,
-  ) => void
+  ) => void;
 
   'users/get-status': (
     ev: { users: string[] },
     cb: (
       response: Omit<IDefaultCallbackResponse, 'payload'> & {
-        payload: { online: string[]; offline: string[] }
+        payload: { online: string[]; offline: string[] };
       },
     ) => void,
-  ) => void
+  ) => void;
 }
 
 export interface IServerToClientEvents {
   'chats/send-message': (ev: {
-    chat_id: string
-    user_id: string
-    message: undefined
-  }) => void
+    chat_id: string;
+    user_id: string;
+    message: undefined;
+  }) => void;
 
-  'chats/user-typing': (ev: { chat_id: string; user_id: string }) => void
+  'chats/user-typing': (ev: { chat_id: string; user_id: string }) => void;
 
   'chats/read-message': (ev: {
-    chat_id: string
-    message_id: string
-    user_id: string
-  }) => void
+    chat_id: string;
+    message_id: string;
+    user_id: string;
+  }) => void;
 
-  'rooms/join-room': (ev: { room_id: string; user_id: string }) => void
+  'rooms/join-room': (ev: { room_id: string; user_id: string }) => void;
 
-  'rooms/leave-room': (ev: { room_id: string; user_id: string }) => void
+  'rooms/leave-room': (ev: { room_id: string; user_id: string }) => void;
 
   'rooms/send-message': (ev: {
-    room_id: string
-    user_id: string
-    content: string
-  }) => void
+    room_id: string;
+    user_id: string;
+    content: string;
+  }) => void;
 
-  'rooms/user-typing': (ev: { room_id: string; user_id: string }) => void
+  'rooms/user-typing': (ev: { room_id: string; user_id: string }) => void;
 
-  'users/get-status': (ev: { users: string[] }) => void
+  'users/get-status': (ev: { users: string[] }) => void;
 
-  'notifications/new-notification': (ev: { notification: undefined }) => void
+  'notifications/new-notification': (ev: { notification: undefined }) => void;
 }
 
 export interface IInterServerEvents {}

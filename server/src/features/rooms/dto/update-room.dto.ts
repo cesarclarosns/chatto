@@ -1,6 +1,4 @@
-import { z } from 'zod'
-import { createRoomDtoSchema } from './create-room.dto'
+import { PartialType } from '@nestjs/mapped-types';
+import { CreateRoomDto } from './create-room.dto';
 
-export const updateRoomDtoSchema = createRoomDtoSchema.partial()
-
-export type TUpdateRoomDto = z.infer<typeof updateRoomDtoSchema>
+export class UpdateRoomDto extends PartialType(CreateRoomDto) {}

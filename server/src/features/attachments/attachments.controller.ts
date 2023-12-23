@@ -1,21 +1,49 @@
-import { RequestHandler, Router } from 'express'
-import passport from 'passport'
-import { AUTH_STRATEGIES } from '../auth/auth.constants'
+import {
+  Body,
+  Controller,
+  Get,
+  ParseFilePipe,
+  Post,
+  Query,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 
+import { AttachmentsService } from './attachments.service';
+import { CreateAttachmentDto } from './dto/create-attachment.dto';
+import { FindAllAttachmentsDto } from './dto/find-all-attachments.dto';
+
+/**
+ * TODO:
+ * Add validator for size of attachments
+ *  Video: 2gb
+ *  Images: 10mb
+ *  Audio: 10mb
+ */
+
+@Controller('attachments')
 export class AttachmentsController {
-  router: Router
+  constructor(private readonly attachmentsService: AttachmentsService) {}
 
-  constructor() {
-    this.router = Router()
-
-    this.router.use(passport.authenticate(AUTH_STRATEGIES.accessToken))
-
-    this.router.post('/', this.create)
+  @Post()
+  @UseInterceptors(FileInterceptor('file', {}))
+  create(
+    @Body() createAttachmentDto: CreateAttachmentDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [],
+      }),
+    )
+    file: Express.Multer.File,
+  ) {
+    console.log(createAttachmentDto, file);
+    // return this.attachmentsService.create(createAttachmentDto, file);
   }
 
-  create: RequestHandler = (req, res) => {
-    console.log(req, res)
+  @Get()
+  findAll(@Query() findAllAttachmentsDto: FindAllAttachmentsDto) {
+    console.log('ids:', findAllAttachmentsDto.ids);
+    // return this.attachmentsService.findAll(findAllAttachmentsDto);
   }
 }
-
-export const attachmentsController = new AttachmentsController()

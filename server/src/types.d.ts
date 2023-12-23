@@ -1,9 +1,9 @@
-import { TTokenPayload } from '@features/auth/auth.types'
+import { TTokenPayload } from '@features/auth/auth.types';
 
 declare module 'express-serve-static-core' {
   interface Request {
-    user: TTokenPayload
+    user: TTokenPayload;
   }
 }
 
-export {}
+export {};

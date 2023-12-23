@@ -1,0 +1,130 @@
+import Joi from 'joi';
+
+export default () => ({
+  APP: {
+    API_DOMAIN: process.env.API_DOMAIN,
+    API_PREFIX: process.env.API_PREFIX,
+    API_SOCKET_PATH: process.env.API_SOCKET_PATH,
+    APP_DOMAIN: process.env.APP_DOMAIN,
+    LISTENING_PORT: parseInt(process.env.LISTENING_PORT),
+    LIVEKIT_API_KEY: process.env.LIVEKIT_API_KEY,
+    LIVEKIT_HOST: process.env.LIVEKIT_HOST,
+    LIVEKIT_SECRET_KEY: process.env.LIVEKIT_SECRET_KEY,
+    SMTP_EMAIL: process.env.SMTP_EMAIL,
+    SMTP_HOST: process.env.SMTP_HOST,
+    SMTP_PASS: process.env.SMTP_PASS,
+    SMTP_USER: process.env.SMTP_USER,
+  },
+  AUTH: {
+    GOOGLE_CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL,
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+    JWT_ACCESS_EXPIRES_IN: process.env.JWT_ACCESS_EXPIRES_IN,
+    JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
+    JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN,
+    JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
+    JWT_RESET_PASSWORD_EXPIRES_IN: process.env.JWT_RESET_PASSWORD_EXPIRES_IN,
+    JWT_RESET_PASSWORD_SECRET: process.env.JWT_RESET_PASSWORD_SECRET,
+  },
+  CACHE: {
+    URL: process.env.CACHE_URL,
+  },
+  CORS: {
+    ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
+  },
+  DATABASE: {
+    URI: process.env.MONGODB_URI,
+  },
+  STORAGE: {
+    AWS_CLOUDFRONT_DISTRIBUTION_DOMAIN:
+      process.env.AWS_CLOUDFRONT_DISTRIBUTION_DOMAIN,
+    AWS_CLOUDFRONT_KEY_PAIR_ID: process.env.AWS_CLOUDFRONT_KEY_PAIR_ID,
+    AWS_CLOUDFRONT_PRIVATE_KEY: process.env.AWS_CLOUDFRONT_PRIVATE_KEY,
+    AWS_S3_ACCESS_KEY_ID: process.env.AWS_S3_ACCESS_KEY_ID,
+    AWS_S3_REGION: process.env.AWS_S3_REGION,
+    AWS_S3_SECRET_ACCESS_KEY: process.env.AWS_S3_SECRET_ACCESS_KEY,
+  },
+  THROTTLER: {
+    LIMIT: parseInt(process.env.THROTTLER_LIMIT),
+    TTL: parseInt(process.env.THROTTLER_TTL),
+  },
+});
+
+export const CONFIG_VALUES = {
+  APP: {
+    API_DOMAIN: 'APP.API_DOMAIN',
+    API_PREFIX: 'APP.API_PREFIX',
+    API_SOCKET_PATH: 'APP.API_SOCKET_PATH',
+    APP_DOMAIN: 'APP.APP_DOMAIN',
+    LISTENING_PORT: 'APP.LISTENING_PORT',
+    LIVEKIT_API_KEY: 'APP.LIVEKIT_API_KEY',
+    LIVEKIT_HOST: 'APP.LIVEKIT_HOST',
+    LIVEKIT_SECRET_KEY: 'APP.LIVEKIT_SECRET_KEY',
+    SMTP_EMAIL: 'APP.SMTP_EMAIL',
+    SMTP_HOST: 'APP.SMTP_HOST',
+    SMTP_PASS: 'APP.SMTP_PASS',
+    SMTP_USER: 'APP.SMTP_USER',
+  },
+  AUTH: {
+    GOOGLE_CALLBACK_URL: 'AUTH.GOOGLE_CALLBACK_URL',
+    GOOGLE_CLIENT_ID: 'AUTH.GOOGLE_CLIENT_ID',
+    GOOGLE_CLIENT_SECRET: 'AUTH.GOOGLE_CLIENT_SECRET',
+    JWT_ACCESS_EXPIRES_IN: 'AUTH.JWT_ACCESS_EXPIRES_IN',
+    JWT_ACCESS_SECRET: 'AUTH.JWT_ACCESS_SECRET',
+    JWT_REFRESH_EXPIRES_IN: 'AUTH.JWT_REFRESH_EXPIRES_IN',
+    JWT_REFRESH_SECRET: 'AUTH.JWT_REFRESH_SECRET',
+    JWT_RESET_PASSWORD_EXPIRES_IN: 'AUTH.JWT_RESET_PASSWORD_EXPIRES_IN',
+    JWT_RESET_PASSWORD_SECRET: 'AUTH.JWT_RESET_PASSWORD_SECRET',
+  },
+  CACHE: {
+    URL: 'CACHE.URL',
+  },
+  CORS: {
+    ALLOWED_ORIGINS: 'CORS.ALLOWED_ORIGINS',
+  },
+  DATABASE: {
+    URI: 'DATABASE.URI',
+  },
+  STORAGE: {
+    AWS_CLOUDFRONT_DISTRIBUTION_DOMAIN:
+      'STORAGE.AWS_CLOUDFRONT_DISTRIBUTION_DOMAIN',
+    AWS_CLOUDFRONT_KEYPAIR_ID: 'STORAGE.AWS_CLOUDFRONT_KEYPAIR_ID',
+    AWS_CLOUDFRONT_PRIVATE_KEY: 'STORAGE.AWS_CLOUDFRONT_PRIVATE_KEY',
+    AWS_S3_ACCESS_KEY_ID: 'STORAGE.AWS_S3_ACCESS_KEY_ID',
+    AWS_S3_REGION: 'STORAGE.AWS_S3_REGION',
+    AWS_S3_SECRET_ACCESS_KEY: 'STORAGE.AWS_S3_SECRET_ACCESS_KEY',
+  },
+  THROTTLER: {
+    LIMIT: 'THROTTLER.LIMIT',
+    TTL: 'THROTTLER.TTL',
+  },
+};
+
+export const configValidationSchema = Joi.object({
+  ALLOWED_ORIGINS: Joi.string(),
+  API_DOMAIN: Joi.string().required(),
+  API_PREFIX: Joi.string().required(),
+  API_SOCKET_PATH: Joi.string().required(),
+  APP_DOMAIN: Joi.string().required(),
+  CACHE_URL: Joi.string().required(),
+  GOOGLE_CALLBACK_URL: Joi.string().required(),
+  GOOGLE_CLIENT_ID: Joi.string().required(),
+  GOOGLE_CLIENT_SECRET: Joi.string().required(),
+  JWT_ACCESS_EXPIRES_IN: Joi.string().equal('15m').required(),
+  JWT_ACCESS_SECRET: Joi.string().required(),
+  JWT_REFRESH_EXPIRES_IN: Joi.string().equal('7d').required(),
+  JWT_REFRESH_SECRET: Joi.string().required(),
+  JWT_RESET_PASSWORD_EXPIRES_IN: Joi.string().equal('2h').required(),
+  JWT_RESET_PASSWORD_SECRET: Joi.string().required(),
+  LISTENING_PORT: Joi.number().equal(4000).required(),
+  LIVEKIT_API_KEY: Joi.string().required(),
+  LIVEKIT_HOST: Joi.string().required(),
+  LIVEKIT_SECRET_KEY: Joi.string().required(),
+  MONGODB_URI: Joi.string().required(),
+  SMTP_EMAIL: Joi.string().email(),
+  SMTP_HOST: Joi.string().required(),
+  SMTP_PASS: Joi.string().required(),
+  SMTP_USER: Joi.string().required(),
+  THROTTLER_LIMIT: Joi.number().max(15).required(),
+  THROTTLER_TTL: Joi.number().required(),
+});

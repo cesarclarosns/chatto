@@ -1,22 +1,34 @@
-import { RequestHandler, Router } from 'express'
-import { StatusCodes } from 'http-status-codes'
+import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { HealthService } from './health.service';
+import { CreateHealthDto } from './dto/create-health.dto';
+import { UpdateHealthDto } from './dto/update-health.dto';
 
+@Controller('health')
 export class HealthController {
-  router: Router
+  constructor(private readonly healthService: HealthService) {}
 
-  constructor() {
-    this.router = Router()
-
-    this.router.get('/', this.getHealth)
+  @Post()
+  create(@Body() createHealthDto: CreateHealthDto) {
+    return this.healthService.create(createHealthDto);
   }
 
-  getHealth: RequestHandler = (req, res) => {
-    res.status(StatusCodes.OK).send({
-      status: 'up',
-      uptime: process.uptime(),
-      timestamp: new Date(Date.now()).toISOString(),
-    })
+  @Get()
+  findAll() {
+    return this.healthService.findAll();
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.healthService.findOne(+id);
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateHealthDto: UpdateHealthDto) {
+    return this.healthService.update(+id, updateHealthDto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.healthService.remove(+id);
   }
 }
-
-export const healthController = new HealthController()

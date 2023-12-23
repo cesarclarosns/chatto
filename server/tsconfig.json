@@ -5,6 +5,7 @@
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
+    "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "target": "ES2021",
     "sourceMap": true,
@@ -17,27 +18,42 @@
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
-    "esModuleInterop": true,
-    "strict": false,
     "paths": {
-      "@app": ["src/app"],
-      "@app/*": ["src/app/*"],
-      "@config": ["src/config"],
-      "@config/*": ["src/config/*"],
-      "@features": ["src/features"],
-      "@features/*": ["src/features/*"],
-      "@middlewares": ["src/middlewares"],
-      "@middlewares/*": ["src/middlewares/*"],
-      "@common": ["src/common"],
-      "@common/*": ["src/common/*"],
-      "@libs": ["src/libs"],
-      "@libs/*": ["src/libs/*"]
+      "@config": [
+        "src/config"
+      ],
+      "@config/*": [
+        "src/config/*"
+      ],
+      "@features": [
+        "src/features"
+      ],
+      "@features/*": [
+        "src/features/*"
+      ],
+      "@middlewares": [
+        "src/middlewares"
+      ],
+      "@middlewares/*": [
+        "src/middlewares/*"
+      ],
+      "@common": [
+        "src/common"
+      ],
+      "@common/*": [
+        "src/common/*"
+      ],
+      "@libs": [
+        "src/libs"
+      ],
+      "@libs/*": [
+        "src/libs/*"
+      ]
     },
     "jsx": "react-jsx",
-    "typeRoots": ["./node_modules/@types", "./src/types.d.ts"]
-  },
-  "ts-node": {
-    "transpileOnly": false,
-    "require": ["tsconfig-paths/register"]
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types.d.ts"
+    ]
   }
 }

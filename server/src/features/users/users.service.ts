@@ -1,58 +1,63 @@
-import { TCreateUserDto } from './dto/create-user.dto'
-import { TUpdateUserDto } from './dto/update-user.dto'
-import { TUserDocumentFilterQuery, userModel } from './models/user.model'
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 
+import { CreateUserDto } from './dto/create-user.dto';
+import { FindAllUsersDto } from './dto/find-all-users-dto';
+import { IncreaseUserMetadataDto } from './dto/increase-user-metadata.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { TUserFilterQuery, User } from './entities/user.entity';
+
+@Injectable()
 export class UsersService {
-  private readonly userModel: typeof userModel
+  constructor(@InjectModel(User.name) private userModel: Model<User>) {}
 
-  constructor() {
-    this.userModel = userModel
+  async create(createUserDto: CreateUserDto) {
+    return await this.userModel.create(createUserDto);
   }
 
-  findOne = async (filter: TUserDocumentFilterQuery) => {
-    return await this.userModel.findOne(filter)
+  async findAll(findAllUsersDto: FindAllUsersDto) {
+    return await this.userModel.find(findAllUsersDto);
   }
 
-  findOneById = async (id: string) => {
-    return await this.userModel.findById(id)
+  async findOne(filter: TUserFilterQuery) {
+    return await this.userModel.findOne(filter);
   }
 
-  findOneByEmail = async (email: string) => {
-    return await this.userModel.findOne({ email })
+  async findOneById(id: string) {
+    return await this.userModel.findById(id);
   }
 
-  findOneByGoogleId = async (google_id: string) => {
-    return await this.userModel.findOne({ google_id })
+  async findOneByEmail(email: string) {
+    return await this.userModel.findOne({ email });
   }
 
-  findOneUserProfileById = async (id: string) => {
-    return await this.userModel.findById(id, { password: 0, email: 0 })
+  async findOneByGoogleId(google_id: string) {
+    return await this.userModel.findOne({ google_id });
   }
 
-  findOneUserProfileByUsername = async (username: string) => {
-    return await this.userModel.findOne({ username }, { password: 0, email: 0 })
+  async findOneUserInfoById(id: string) {
+    return await this.userModel.findOne(
+      { _id: id },
+      { metadata: 0, password: 0 },
+    );
   }
 
-  findOneUserInfoById = async (id: string) => {
-    return await this.userModel.findById(id)
+  async update(id: string, updateUserDto: UpdateUserDto) {
+    return await this.userModel.updateOne({ _id: id }, { $set: updateUserDto });
   }
 
-  findAll = async ({}: {
-    filter: TUserDocumentFilterQuery
-    limit: number
-    skip: number
-    sort: string
-  }) => {
-    return await this.userModel.find({})
+  async findOneUserProfileByUsername(username: string) {
+    return await this.userModel.findOne({ username }, { password: 0 });
   }
 
-  update = async (id: string, updateUserDto: TUpdateUserDto) => {
-    return await this.userModel.updateOne({ _id: id }, { $set: updateUserDto })
-  }
-
-  create = async (createUserDto: TCreateUserDto) => {
-    return await this.userModel.create(createUserDto)
+  async increaseUserMetadata(
+    id: string,
+    increaseUserMetadataDto: IncreaseUserMetadataDto,
+  ) {
+    return await this.userModel.updateOne(
+      { _id: id },
+      { $inc: increaseUserMetadataDto },
+    );
   }
 }
-
-export const usersService = new UsersService()

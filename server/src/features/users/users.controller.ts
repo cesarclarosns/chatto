@@ -1,76 +1,50 @@
-import { RequestHandler, Router } from 'express'
-import { UsersService, usersService } from './users.service'
-import { accessTokenGuard } from '../auth/guards/access-token.guard'
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
+import { Request } from 'express';
 
+import { CreateUserDto } from './dto/create-user.dto';
+import { FindAllUsersDto } from './dto/find-all-users-dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UsersService } from './users.service';
+
+@Controller('users')
 export class UsersController {
-  router: Router
-  private readonly usersService: UsersService
+  constructor(private readonly usersService: UsersService) {}
 
-  constructor() {
-    this.router = Router()
-    this.usersService = usersService
-
-    this.router.get('/', this.findAll)
-    this.router.get('/me', accessTokenGuard, this.findMyUserInfo)
-    this.router.patch('/me', accessTokenGuard, this.update)
-    this.router.get('/:username/profile', this.findOneUserProfile)
-    this.router.get('/:user_id/reviews', this.findAllUserRewiews)
-    this.router.post(
-      '/:user_id/reviews',
-      accessTokenGuard,
-      this.createUserReview,
-    )
-    this.router.patch(
-      '/:user_id/reviews/:review_id',
-      accessTokenGuard,
-      this.updateUserReview,
-    )
-    this.router.get('/:user_id/ratings', this.findAllUserRatings)
-    this.router.get(
-      '/:user_id/ratings/me',
-      accessTokenGuard,
-      this.findMyUserRating,
-    )
-    this.router.put(
-      '/:user_id/ratings/me',
-      accessTokenGuard,
-      this.updateMyUserRating,
-    )
+  @Post()
+  async create(@Body() createUserDto: CreateUserDto) {
+    return await this.usersService.create(createUserDto);
   }
 
-  findAll: RequestHandler = () => {}
-
-  findMyUserInfo: RequestHandler = () => {}
-
-  findOneUserProfile: RequestHandler = () => {}
-
-  update: RequestHandler = () => {}
-
-  findAllUserRewiews: RequestHandler = () => {}
-
-  createUserReview: RequestHandler = () => {}
-
-  updateUserReview: RequestHandler = () => {}
-
-  findAllUserRatings: RequestHandler = (req, res) => {
-    console.log(req, res)
+  @Get()
+  async findAll(@Query() findAllUsersDto: FindAllUsersDto) {
+    return await this.usersService.findAll(findAllUsersDto);
   }
 
-  findOneUserRating: RequestHandler = () => {}
-
-  findMyUserRating: RequestHandler = (req, res) => {
-    const { sub: rater_id } = (req as any).user
-    const { user_id } = req.params
-
-    console.log({ rater_id, user_id, res })
+  @Get('me')
+  async findMyUserInfo(@Req() req: Request) {
+    const user_id = req.user.sub;
+    return await this.usersService.findOneUserInfoById(user_id);
   }
 
-  updateMyUserRating: RequestHandler = (req, res) => {
-    const { sub: rater_id } = (req as any).user
-    const { user_id } = req.params
+  @Patch(':user_id')
+  async update(
+    @Param('user_id') user_id: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ) {
+    return await this.usersService.update(user_id, updateUserDto);
+  }
 
-    console.log({ rater_id, user_id, res })
+  @Get(':username/profiles')
+  async findOneUserProfile(@Param('username') username: string) {
+    return await this.usersService.findOneUserProfileByUsername(username);
   }
 }
-
-export const usersController = new UsersController()

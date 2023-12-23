@@ -1,7 +1,6 @@
-import { z } from 'zod'
+import { IsEmail } from 'class-validator';
 
-export const resetPasswordDtoSchema = z.object({
-  email: z.string().email(),
-})
-
-export type TResetPasswordDto = z.infer<typeof resetPasswordDtoSchema>
+export class ResetPasswordDto {
+  @IsEmail()
+  email: string;
+}

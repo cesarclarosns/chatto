@@ -1,19 +1,26 @@
+import { Injectable } from '@nestjs/common';
+import { CreatePaymentDto } from './dto/create-payment.dto';
+import { UpdatePaymentDto } from './dto/update-payment.dto';
+
+@Injectable()
 export class PaymentsService {
-  private readonly paymentModel: any
-
-  constructor() {}
-
-  async findOne(id: string) {
-    console.log(id)
+  create(createPaymentDto: CreatePaymentDto) {
+    return 'This action adds a new payment';
   }
 
-  async createMessagePayment() {}
+  findAll() {
+    return `This action returns all payments`;
+  }
 
-  async createPostPayment() {}
+  findOne(id: number) {
+    return `This action returns a #${id} payment`;
+  }
 
-  async createUserSubscriptionPayment() {}
+  update(id: number, updatePaymentDto: UpdatePaymentDto) {
+    return `This action updates a #${id} payment`;
+  }
 
-  async createPlatformSubscriptionPayment() {}
+  remove(id: number) {
+    return `This action removes a #${id} payment`;
+  }
 }
-
-export const paymentsService = new PaymentsService()

@@ -1,44 +1,34 @@
-import { RequestHandler, Router } from 'express'
-import { PaymentsService, paymentsService } from './payments.service'
-import passport from 'passport'
-import { AUTH_STRATEGIES } from '../auth/auth.constants'
+import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { PaymentsService } from './payments.service';
+import { CreatePaymentDto } from './dto/create-payment.dto';
+import { UpdatePaymentDto } from './dto/update-payment.dto';
 
+@Controller('payments')
 export class PaymentsController {
-  router: Router
-  private readonly paymentsService: PaymentsService
+  constructor(private readonly paymentsService: PaymentsService) {}
 
-  constructor() {
-    this.router = Router()
-    this.paymentsService = paymentsService
-
-    this.router.use(passport.authenticate(AUTH_STRATEGIES.accessToken))
-
-    this.router.get('/:payment_id', this.findOne)
-    this.router.post('/messages/:message_id', this.createMessagePayment)
-    this.router.post('/posts/:post_id', this.createPostPayment)
-    this.router.post(
-      '/users-subscription/:user_id',
-      this.createUserSubscriptionPayment,
-    )
-    this.router.post(
-      '/platform-subscription/:user_id',
-      this.createPlatformSubscriptionPayment,
-    )
+  @Post()
+  create(@Body() createPaymentDto: CreatePaymentDto) {
+    return this.paymentsService.create(createPaymentDto);
   }
 
-  findOne: RequestHandler = (req, res) => {
-    const { id } = req.params
-    this.paymentsService.findOne(id)
-    res.send()
+  @Get()
+  findAll() {
+    return this.paymentsService.findAll();
   }
 
-  createMessagePayment: RequestHandler = () => {}
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.paymentsService.findOne(+id);
+  }
 
-  createUserSubscriptionPayment: RequestHandler = () => {}
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updatePaymentDto: UpdatePaymentDto) {
+    return this.paymentsService.update(+id, updatePaymentDto);
+  }
 
-  createPostPayment: RequestHandler = () => {}
-
-  createPlatformSubscriptionPayment: RequestHandler = () => {}
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.paymentsService.remove(+id);
+  }
 }
-
-export const paymentsController = new PaymentsController()

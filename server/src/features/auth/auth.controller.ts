@@ -1,87 +1,167 @@
-import { Router } from 'express'
-import { AuthService, authService } from './auth.service'
+import { BadRequestResponseBodyDto } from '@common/dto/bad-request-reponse-body.dto';
+import { UnauthorizedResponseBodyDto } from '@common/dto/unauthorized-reponse-body.dto';
+import { UserDto } from '@features/users/dto/user.dto';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Patch,
+  Post,
+  Query,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBadRequestResponse,
+  ApiCookieAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiResponse,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
+import { Request, Response } from 'express';
 
-import { StatusCodes } from 'http-status-codes'
-import { COOKIES } from './auth.constants'
-import { CONFIG } from '@config'
+import { AUTH_COOKIES } from './auth.constants';
+import { AuthService } from './auth.service';
+import { Public } from './decorators/public.decorator';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ResetPasswordCallbackDto } from './dto/reset-password-callback.dto';
+import { ResetPasswordCallbackQueryDto } from './dto/reset-password-callback-query.dto';
+import { SignInDto } from './dto/sign-in.dto';
+import { SignInResponseBodyDto } from './dto/sign-in-response-body.dto';
+import { SignUpDto } from './dto/sign-up.dto';
+import { RefreshTokenGuard } from './guards';
+import { GoogleOAuthGuard } from './guards/google-oauth.guard';
 
-import { asyncHandler } from '@libs/async-handler'
-import { signInDtoSchema } from './dto/sign-in.dto'
-import { signUpDtoSchema } from './dto/sign-up.dto'
-import { refreshTokenGuard } from './guards/refresh-token.guard'
-import { googleGuard } from './guards/google.guard'
-
+@Controller('auth')
 export class AuthController {
-  router: Router
-  authService: AuthService
+  constructor(private readonly authService: AuthService) {}
 
-  constructor() {
-    this.router = Router()
-    this.authService = authService
+  @Public()
+  @Post('sign-in')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({
+    headers: {
+      'Set-Cookie': {
+        description:
+          'Set cookies: "refreshToken" (httpOnly) and "persist". The "refreshToken" cookie will be used to retrieve an accessToken and rotate the refreshToken. The "persist" cookie will be used by the client to identify if the user is logged in.',
+      },
+    },
+    type: SignInResponseBodyDto,
+  })
+  @ApiBadRequestResponse({
+    type: BadRequestResponseBodyDto,
+  })
+  async signIn(
+    @Body() signInDto: SignInDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<SignInResponseBodyDto> {
+    const tokens = await this.authService.signIn(signInDto);
+    res.cookie(AUTH_COOKIES.REFRESH_TOKEN, tokens.refreshToken, {
+      httpOnly: true,
+      path: '/',
+    });
+    res.cookie(AUTH_COOKIES.PERSIST, true, { path: '/' });
 
-    this.router.post('/sign-in', this.signIn)
-    this.router.post('/sign-up', this.signUp)
-    this.router.post('/sign-out', refreshTokenGuard, this.signOut)
-    this.router.get('/refresh', refreshTokenGuard, this.refresh)
-    this.router.post('/reset-password', this.resetPassword)
-    this.router.get('/reset-password/callback', this.resetPasswordCallback)
-    this.router.post('/google', googleGuard)
-    this.router.post('/google/callback', googleGuard, this.googleCallback)
+    return { accessToken: tokens.accessToken };
   }
 
-  signIn = asyncHandler(async (req, res) => {
-    const signInDto = signInDtoSchema.parse(req.body)
-    const tokens = await this.authService.signIn(signInDto)
-
-    res.cookie(COOKIES.refreshToken, tokens.refreshToken, { httpOnly: true })
-    res.cookie(COOKIES.persist, true)
-    res.status(StatusCodes.OK).send({ accessToken: tokens.accessToken })
+  @Public()
+  @Post('sign-up')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiCreatedResponse({
+    status: HttpStatus.CREATED,
+    type: UserDto,
   })
-
-  signUp = asyncHandler(async (req, res) => {
-    const signUpDto = signUpDtoSchema.parse(req.body)
-    await this.authService.signUp(signUpDto)
-
-    res.status(StatusCodes.OK).send()
+  @ApiBadRequestResponse({
+    type: BadRequestResponseBodyDto,
   })
+  signUp(@Body() signUpDto: SignUpDto) {
+    return this.authService.signUp(signUpDto);
+  }
 
-  signOut = asyncHandler(async (req, res) => {
-    res.clearCookie(COOKIES.refreshToken, { httpOnly: true })
-    res.clearCookie(COOKIES.persist)
-    res.status(StatusCodes.OK).send()
+  @Public()
+  @Post('sign-out')
+  @UseGuards(RefreshTokenGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiCookieAuth('refreshToken')
+  @ApiOkResponse({
+    headers: {
+      'Set-Cookie': {
+        description: 'Clear cookies: "refreshToken" and "persist".',
+      },
+    },
   })
-
-  refresh = asyncHandler(async (req, res) => {
-    const user_id = req.user.sub
-    const tokens = await this.authService.refreshTokens(user_id)
-
-    res.cookie(COOKIES.refreshToken, tokens.refreshToken, { httpOnly: true })
-    res.status(StatusCodes.OK).send({ accessToken: tokens.accessToken })
+  @ApiUnauthorizedResponse({
+    type: UnauthorizedResponseBodyDto,
   })
+  signOut(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie(AUTH_COOKIES.REFRESH_TOKEN, { httpOnly: true, path: '/' });
+    res.clearCookie(AUTH_COOKIES.PERSIST, { path: '/' });
 
-  resetPassword = asyncHandler(async (req, res) => {
-    await this.authService.resetPassword(req.body)
-    res.status(StatusCodes.OK).send()
+    return;
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    await this.authService.resetPassword(resetPasswordDto);
+    return;
+  }
+
+  @Public()
+  @Patch('reset-password/callback')
+  @HttpCode(HttpStatus.OK)
+  async resetPasswordCallback(
+    @Body() resetPasswordCallbackDto: ResetPasswordCallbackDto,
+    @Query() query: ResetPasswordCallbackQueryDto,
+  ) {
+    await this.authService.resetPasswordCallback(
+      resetPasswordCallbackDto,
+      query.token,
+    );
+    return;
+  }
+
+  @Public()
+  @Get('refresh')
+  @UseGuards(RefreshTokenGuard)
+  @ApiResponse({
+    headers: {
+      'Set-Cookie': {
+        description:
+          'Set cookies: "refreshToken" (httpOnly) and "persist". The "refreshToken" cookie will be used to retrieve an accessToken and rotate the refreshToken. The "persist" cookie will be used by the client to identify if the user is logged in.',
+      },
+    },
   })
+  @ApiCookieAuth('refreshToken')
+  async refreshTokens(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const user_id = req.user.sub;
 
-  resetPasswordCallback = asyncHandler(async (req, res) => {
-    const { token } = req.query as { token: string }
-    await this.authService.resetPasswordCallback(req.body, token)
-    res.status(StatusCodes.OK).send()
-  })
+    const tokens = await this.authService.refreshTokens(user_id);
 
-  googleCallback = asyncHandler(async (req, res) => {
-    try {
-      const { sub: user_id } = req.user
-      const tokens = await authService.getTokens(user_id)
+    res.cookie(AUTH_COOKIES.REFRESH_TOKEN, tokens.refreshToken, {
+      httpOnly: true,
+      path: '/',
+    });
+    res.cookie(AUTH_COOKIES.PERSIST, true, { path: '/' });
 
-      res.cookie(COOKIES.persist, true)
-      res.cookie(COOKIES.refreshToken, tokens.refreshToken, { httpOnly: true })
-    } catch (err) {
-    } finally {
-      res.redirect(CONFIG.app.appDomain)
-    }
-  })
+    return { accessToken: tokens.accessToken };
+  }
+
+  @Get('google-oauth')
+  @Public()
+  @UseGuards(GoogleOAuthGuard)
+  async googleOAuth() {}
+
+  @Get('google-oauth/callback')
+  @UseGuards(GoogleOAuthGuard)
+  async googleOAuthCallback() {}
 }
-
-export const authController = new AuthController()

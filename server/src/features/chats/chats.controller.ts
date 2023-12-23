@@ -1,34 +1,34 @@
-import { RequestHandler, Router } from 'express'
-import passport from 'passport'
-import { AUTH_STRATEGIES } from '@features/auth/auth.constants'
+import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { ChatsService } from './chats.service';
+import { CreateChatDto } from './dto/create-chat.dto';
+import { UpdateChatDto } from './dto/update-chat.dto';
 
-class ChatsController {
-  router: Router
+@Controller('chats')
+export class ChatsController {
+  constructor(private readonly chatsService: ChatsService) {}
 
-  constructor() {
-    this.router = Router()
-
-    this.router.use(passport.authenticate(AUTH_STRATEGIES.accessToken))
-
-    this.router.post('/mass_message', this.createMassMessage)
-    this.router.get('/:chat_id/messages', this.findAll)
-    this.router.get(
-      '/:chat_id/last-read-message-per-user',
-      this.findAllLastReadMessagePerUser,
-    )
+  @Post()
+  create(@Body() createChatDto: CreateChatDto) {
+    return this.chatsService.create(createChatDto);
   }
 
-  findAll: RequestHandler = (req, res) => {
-    console.log(req, res)
+  @Get()
+  findAll() {
+    return this.chatsService.findAll();
   }
 
-  findAllLastReadMessagePerUser: RequestHandler = (req, res) => {
-    console.log(req, res)
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.chatsService.findOne(+id);
   }
 
-  createMassMessage: RequestHandler = (req, res) => {
-    console.log(req, res)
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateChatDto: UpdateChatDto) {
+    return this.chatsService.update(+id, updateChatDto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.chatsService.remove(+id);
   }
 }
-
-export const chatsController = new ChatsController()

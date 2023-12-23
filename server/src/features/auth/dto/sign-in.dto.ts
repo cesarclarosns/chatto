@@ -1,9 +1,13 @@
-import { createUserDtoSchema } from '@features/users/dto/create-user.dto'
-import { z } from 'zod'
+import { ApiProperty } from '@nestjs/swagger';
+import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 
-export const signInDtoSchema = createUserDtoSchema.pick({
-  email: true,
-  password: true,
-})
+export class SignInDto {
+  @IsEmail()
+  @ApiProperty()
+  email: string;
 
-export type TSignInDto = z.infer<typeof signInDtoSchema>
+  @IsString()
+  @IsNotEmpty()
+  @ApiProperty()
+  password: string;
+}

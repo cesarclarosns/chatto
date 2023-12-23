@@ -1,20 +1,27 @@
-import passport from 'passport'
-import { Strategy as JwtStrategy } from 'passport-jwt'
-import { CONFIG } from '@config'
+import { CONFIG_VALUES } from '@config/configuration';
+import { TTokenPayload } from '@features/auth/auth.types';
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { PassportStrategy } from '@nestjs/passport';
+import { ExtractJwt, Strategy } from 'passport-jwt';
 
-import { AUTH_STRATEGIES } from '../auth.constants'
+import { AUTH_STRATEGIES } from '../auth.constants';
 
-passport.use(
+@Injectable()
+export class AccessTokenStrategy extends PassportStrategy(
+  Strategy,
   AUTH_STRATEGIES.accessToken,
-  new JwtStrategy(
-    {
-      secretOrKey: CONFIG.auth.accessTokenSecret,
-      jwtFromRequest: (req) => {
-        return req.headers['authorization']?.slice(7)
-      },
-    },
-    (payload, done) => {
-      done(null, payload)
-    },
-  ),
-)
+) {
+  constructor(configService: ConfigService) {
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      secretOrKey: configService.getOrThrow<string>(
+        CONFIG_VALUES.AUTH.JWT_ACCESS_SECRET,
+      ),
+    });
+  }
+
+  validate(payload: TTokenPayload) {
+    return payload;
+  }
+}

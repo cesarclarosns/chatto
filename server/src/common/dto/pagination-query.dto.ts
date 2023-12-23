@@ -1,10 +1,20 @@
-import { z } from 'zod'
+import { ApiProperty } from '@nestjs/swagger';
+import { IsNumberString, IsOptional } from 'class-validator';
 
-export const paginationQueryDtoSchema = z.object({
-  filter: z.string(),
-  sort: z.string(),
-  skip: z.string(),
-  limit: z.string(),
-})
+export class PaginationQueryDto {
+  @ApiProperty({
+    description: 'Maximum number of documents to be returned',
+    example: 10,
+  })
+  @IsNumberString()
+  limit: string;
 
-export type TPaginationQueryDto = z.infer<typeof paginationQueryDtoSchema>
+  @ApiProperty({
+    description: 'Number of documents to skip',
+    example: 0,
+    required: false,
+  })
+  @IsOptional()
+  @IsNumberString()
+  skip?: string;
+}

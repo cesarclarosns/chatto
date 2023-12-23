@@ -1,173 +1,213 @@
-import { StatusCodes } from 'http-status-codes'
-import bcrypt from 'bcrypt'
-import { TTokenPayload } from './auth.types'
-import { TUserDocument } from '../users/models/user.model'
-import { CONFIG } from '@config'
-import { signAsync, verifyAsync } from '@libs/jwt'
-import { UsersService, usersService } from '@features/users/users.service'
-import { HttpException } from '@common/classes/http-exception'
-import { TSignUpDto } from './dto/sign-up.dto'
-import { TSignInDto } from './dto/sign-in.dto'
-import { TResetPasswordDto } from './dto/reset-password.dto'
-import { TResetPasswordCallbackDto } from './dto/reset-password-callback.dto'
+import { CONFIG_VALUES } from '@config/configuration';
+import { TTokenPayload } from '@features/auth/auth.types';
+import { User } from '@features/users/entities/user.entity';
+import { UsersService } from '@features/users/users.service';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { JwtService } from '@nestjs/jwt';
+import argon2 from 'argon2';
 
+import { AUTH_EVENTS } from './auth.constants';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ResetPasswordCallbackDto } from './dto/reset-password-callback.dto';
+import { SignInDto } from './dto/sign-in.dto';
+import { SignUpDto } from './dto/sign-up.dto';
+import { ResetPasswordEvent } from './events/reset-password.event';
+import { SignUpEvent } from './events/sign-up.event';
+
+@Injectable()
 export class AuthService {
-  private readonly usersService: UsersService
-
-  constructor() {
-    this.usersService = usersService
-  }
+  constructor(
+    private eventEmitter: EventEmitter2,
+    private jwtService: JwtService,
+    private usersService: UsersService,
+    private configService: ConfigService,
+  ) {}
 
   async signIn(
-    signInDto: TSignInDto,
+    signInDto: SignInDto,
   ): Promise<{ accessToken: string; refreshToken: string }> {
-    const user = await this.usersService.findOneByEmail(signInDto.email)
+    const user = await this.usersService.findOneByEmail(signInDto.email);
     if (!user) {
-      throw new HttpException({
-        errors: { email: 'Email is not registered' },
-        message: 'Email is not registered',
-        statusCode: StatusCodes.BAD_REQUEST,
-      })
+      throw new HttpException(
+        {
+          errors: { email: 'Email is not registered' },
+          message: 'Email is not registered',
+          statusCode: HttpStatus.BAD_REQUEST,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
-    const passwordMatches = await bcrypt.compare(
-      signInDto.password,
+    const passwordMatches = await argon2.verify(
       user.password,
-    )
-
+      signInDto.password,
+    );
     if (!passwordMatches) {
-      throw new HttpException({
-        errors: { password: 'Password is incorrect' },
-        message: 'Password is incorrect',
-        statusCode: StatusCodes.BAD_REQUEST,
-      })
+      throw new HttpException(
+        {
+          errors: { password: 'Password is incorrect' },
+          message: 'Password is incorrect',
+          statusCode: HttpStatus.BAD_REQUEST,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
-    const tokens = await this.getTokens(user.id)
-    return tokens
+    const tokens = await this.getTokens(user.id);
+    return tokens;
   }
 
-  async signUp(signUpDto: TSignUpDto): Promise<TUserDocument> {
+  async signUp(signUpDto: SignUpDto): Promise<User> {
     const user = await this.usersService.findOne({
       $or: [{ email: signUpDto.email }, { username: signUpDto.username }],
-    })
+    });
     if (user) {
-      throw new HttpException({
-        errors: {
-          ...(user.email == signUpDto.email && {
-            email: 'Email is already registered',
-          }),
-          ...(user.username == signUpDto.username && {
-            username: 'Username is already taken',
-          }),
+      throw new HttpException(
+        {
+          errors: {
+            ...(user.email == signUpDto.email && {
+              email: 'Email is already registered',
+            }),
+            ...(user.username == signUpDto.username && {
+              email: 'Username is already taken',
+            }),
+          },
+          statusCode: HttpStatus.BAD_REQUEST,
         },
-        statusCode: StatusCodes.BAD_REQUEST,
-      })
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
-    const hashedPassword = await this.hashPassword(signUpDto.password)
-    signUpDto.password = hashedPassword
+    const hashedPassword = await this.hashData(signUpDto.password);
+    signUpDto.password = hashedPassword;
 
-    const userCreated = await this.usersService.create({ ...signUpDto })
+    const userCreated = await this.usersService.create({ ...signUpDto });
 
-    // const userRegisteredEvent = new UserRegisteredEvent({
-    //   email: userCreated.email,
-    // })
+    // Emit event
+    const signUpEvent = new SignUpEvent({ email: userCreated.email });
+    this.eventEmitter.emit(AUTH_EVENTS.signUp, signUpEvent);
 
-    // this.eventEmitter.emit(USERS_EVENTS.userRegistered, userRegisteredEvent)
-
-    return userCreated
+    return userCreated;
   }
 
   async refreshTokens(
     user_id: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
-    return await this.getTokens(user_id)
+    return await this.getTokens(user_id);
   }
 
   async getTokens(
     user_id: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
-    const payload = this.getTokenPayload(user_id)
+    const payload = this.getTokenPayload(user_id);
 
     const [accessToken, refreshToken] = await Promise.all([
-      signAsync(payload, CONFIG.auth.accessTokenSecret, {
-        expiresIn: CONFIG.auth.accessTokenExpiresIn,
+      this.jwtService.signAsync(payload, {
+        expiresIn: this.configService.getOrThrow<string>(
+          CONFIG_VALUES.AUTH.JWT_ACCESS_EXPIRES_IN,
+        ),
+        secret: this.configService.getOrThrow<string>(
+          CONFIG_VALUES.AUTH.JWT_ACCESS_SECRET,
+        ),
       }),
-      signAsync(payload, CONFIG.auth.refreshTokenSecret, {
-        expiresIn: CONFIG.auth.refreshTokenExpiresIn,
+      this.jwtService.signAsync(payload, {
+        expiresIn: this.configService.getOrThrow<string>(
+          CONFIG_VALUES.AUTH.JWT_REFRESH_EXPIRES_IN,
+        ),
+        secret: this.configService.getOrThrow<string>(
+          CONFIG_VALUES.AUTH.JWT_REFRESH_SECRET,
+        ),
       }),
-    ])
+    ]);
 
     return {
       accessToken,
       refreshToken,
-    }
+    };
   }
 
-  async resetPassword(resetPasswordDto: TResetPasswordDto): Promise<void> {
-    //create token
-    const user = await this.usersService.findOneByEmail(resetPasswordDto.email)
+  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<void> {
+    // Create token
+    const user = await this.usersService.findOneByEmail(resetPasswordDto.email);
 
     if (!user)
-      throw new HttpException({
-        errors: { email: 'Email is not registered' },
-        message: 'Email is not registered',
-        statusCode: StatusCodes.BAD_REQUEST,
-      })
+      throw new HttpException(
+        {
+          errors: { email: 'Email is not registered' },
+          message: 'Email is not registered',
+          statusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+        },
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
 
-    const token = await this.getResetPasswordToken(user.id)
+    const token = await this.getPasswordResetToken(user.id);
 
-    //create password reset link
-    const url = new URL('/auth/reset-password', CONFIG.app.appDomain)
-    url.searchParams.set('token', token)
+    // Create password reset link
+    const url = new URL(
+      '/auth/reset-password',
+      this.configService.getOrThrow<string>(CONFIG_VALUES.APP.APP_DOMAIN),
+    );
+    url.searchParams.set('token', token);
 
-    // const resetPasswordLink = url.toString()
+    const resetPasswordLink = url.toString();
 
-    // //send email
-    // const resetPasswordEvent = new UserResetPasswordEvent({
-    //   email: resetPasswordDto.email,
-    //   resetPasswordLink,
-    // })
-
-    // this.eventEmitter.emit(USERS_EVENTS.userResetPassword, resetPasswordEvent)
+    // Emit event
+    const resetPasswordEvent = new ResetPasswordEvent({
+      email: resetPasswordDto.email,
+      resetPasswordLink,
+    });
+    this.eventEmitter.emit(AUTH_EVENTS.resetPassword, resetPasswordEvent);
   }
 
   async resetPasswordCallback(
-    resetPasswordCallbackDto: TResetPasswordCallbackDto,
+    resetPasswordCallbackDto: ResetPasswordCallbackDto,
     token: string,
   ) {
-    const payload = (await verifyAsync(
-      token,
-      CONFIG.auth.resetPasswordTokenSecret,
-      {},
-    )) as TTokenPayload
+    let payload: TTokenPayload;
 
-    const user = await this.usersService.findOneById(payload.sub)
+    try {
+      payload = await this.jwtService.verifyAsync(token, {
+        secret: this.configService.getOrThrow<string>(
+          CONFIG_VALUES.AUTH.JWT_RESET_PASSWORD_SECRET,
+        ),
+      });
+    } catch (err) {
+      throw new HttpException(err.message, HttpStatus.UNAUTHORIZED);
+    }
 
-    const hashedPassword = await this.hashPassword(
+    const user = await this.usersService.findOneById(payload.sub);
+
+    const hashedPassword = await this.hashData(
       resetPasswordCallbackDto.password,
-    )
+    );
 
     return await this.usersService.update(user.id, {
       password: hashedPassword,
-    })
+    });
   }
 
-  async hashPassword(password: string): Promise<string> {
-    return await bcrypt.hash(password, CONFIG.auth.passwordSalt)
-  }
-
-  async getResetPasswordToken(user_id: string): Promise<string> {
-    const payload = this.getTokenPayload(user_id)
-    return await signAsync(payload, CONFIG.auth.resetPasswordTokenSecret, {})
+  async getPasswordResetToken(user_id: string): Promise<string> {
+    const payload = this.getTokenPayload(user_id);
+    const token = await this.jwtService.signAsync(payload, {
+      expiresIn: this.configService.getOrThrow<string>(
+        CONFIG_VALUES.AUTH.JWT_RESET_PASSWORD_EXPIRES_IN,
+      ),
+      secret: this.configService.getOrThrow<string>(
+        CONFIG_VALUES.AUTH.JWT_RESET_PASSWORD_SECRET,
+      ),
+    });
+    return token;
   }
 
   getTokenPayload(user_id: string): TTokenPayload {
     return {
       sub: user_id,
-    }
+    };
+  }
+
+  async hashData(data: string | Buffer): Promise<string> {
+    return await argon2.hash(data);
   }
 }
-
-export const authService = new AuthService()

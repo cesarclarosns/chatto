@@ -1,33 +1,26 @@
-import { usersService, UsersService } from '../users/users.service'
+import { Injectable } from '@nestjs/common';
+import { CreatePostDto } from './dto/create-post.dto';
+import { UpdatePostDto } from './dto/update-post.dto';
 
-class PostsService {
-  private readonly userPostAccessModel: undefined
-  private readonly postCommentModel: undefined
-  private readonly postLikeModel: undefined
-  private readonly postModel: undefined
-
-  private readonly usersService: UsersService
-
-  constructor() {
-    this.usersService = usersService
+@Injectable()
+export class PostsService {
+  create(createPostDto: CreatePostDto) {
+    return 'This action adds a new post';
   }
 
-  async createUserPostAccess(createUserPostAccessDto: {
-    user_id: string
-    post_id: string
-  }) {
-    console.log(createUserPostAccessDto)
+  findAll() {
+    return `This action returns all posts`;
   }
 
-  async findOne() {}
+  findOne(id: number) {
+    return `This action returns a #${id} post`;
+  }
 
-  async findAll() {}
+  update(id: number, updatePostDto: UpdatePostDto) {
+    return `This action updates a #${id} post`;
+  }
 
-  async create() {}
-
-  async update() {}
-
-  async delete() {}
+  remove(id: number) {
+    return `This action removes a #${id} post`;
+  }
 }
-
-export const postsService = new PostsService()

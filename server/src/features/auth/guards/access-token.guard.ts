@@ -1,22 +1,25 @@
-import { RequestHandler } from 'express'
-import passport from 'passport'
-import { AUTH_STRATEGIES } from '../auth.constants'
-import { HttpException } from '@common/classes/http-exception'
-import { ReasonPhrases, StatusCodes } from 'http-status-codes'
-import { TTokenPayload } from '../auth.types'
+import { IS_PUBLIC_KEY } from '@features/auth/decorators/public.decorator';
+import { ExecutionContext, Injectable } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { AuthGuard } from '@nestjs/passport';
 
-export const accessTokenGuard: RequestHandler = (req, res, next) => {
-  passport.authenticate(
-    AUTH_STRATEGIES.accessToken,
-    (err: Error, user: TTokenPayload) => {
-      if (err) return next(err)
-      if (!user) {
-        throw new HttpException({
-          statusCode: StatusCodes.UNAUTHORIZED,
-          message: ReasonPhrases.UNAUTHORIZED,
-        })
-      }
-      next()
-    },
-  )(req, res, next)
+import { AUTH_STRATEGIES } from '../auth.constants';
+
+@Injectable()
+export class AccessTokenGuard extends AuthGuard(AUTH_STRATEGIES.accessToken) {
+  constructor(private reflector: Reflector) {
+    super();
+  }
+
+  canActivate(context: ExecutionContext) {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isPublic) {
+      return true;
+    }
+
+    return super.canActivate(context);
+  }
 }

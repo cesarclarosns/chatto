@@ -1,33 +1,34 @@
-import { RequestHandler, Router } from 'express'
-import { roomsService, RoomsService } from './rooms.service'
-import { createRoomDtoSchema } from './dto/create-room.dto'
-import { accessTokenGuard } from '@features/auth/guards/access-token.guard'
+import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { RoomsService } from './rooms.service';
+import { CreateRoomDto } from './dto/create-room.dto';
+import { UpdateRoomDto } from './dto/update-room.dto';
 
+@Controller('rooms')
 export class RoomsController {
-  router: Router
-  private readonly roomsService: RoomsService
+  constructor(private readonly roomsService: RoomsService) {}
 
-  constructor() {
-    this.router = Router()
-    this.roomsService = roomsService
-
-    this.router.use(accessTokenGuard)
-
-    this.router.post('/rooms', this.create)
-    this.router.get('/roooms/:room_id', this.findOne)
+  @Post()
+  create(@Body() createRoomDto: CreateRoomDto) {
+    return this.roomsService.create(createRoomDto);
   }
 
-  create: RequestHandler = async (req, res) => {
-    const createRoomDto = await createRoomDtoSchema.parseAsync(req.body)
-
-    console.log(req, res, createRoomDto)
+  @Get()
+  findAll() {
+    return this.roomsService.findAll();
   }
 
-  findOne: RequestHandler = (req, res) => {
-    const { room_id } = req.params
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.roomsService.findOne(+id);
+  }
 
-    console.log(req, res, room_id)
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateRoomDto: UpdateRoomDto) {
+    return this.roomsService.update(+id, updateRoomDto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.roomsService.remove(+id);
   }
 }
-
-export const roomsController = new RoomsController()

@@ -1,10 +1,7 @@
-import { z } from 'zod'
-import { createUserDtoSchema } from '@features/users/dto/create-user.dto'
+import { IsString, IsNotEmpty } from 'class-validator';
 
-export const resetPasswordCallbackDtoSchema = createUserDtoSchema.pick({
-  password: true,
-})
-
-export type TResetPasswordCallbackDto = z.infer<
-  typeof resetPasswordCallbackDtoSchema
->
+export class ResetPasswordCallbackDto {
+  @IsString()
+  @IsNotEmpty()
+  password: string;
+}

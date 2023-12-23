@@ -1,40 +1,34 @@
-import { Router } from 'express'
-import { accessTokenGuard } from '../auth/guards/access-token.guard'
+import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { PostsService } from './posts.service';
+import { CreatePostDto } from './dto/create-post.dto';
+import { UpdatePostDto } from './dto/update-post.dto';
 
+@Controller('posts')
 export class PostsController {
-  router: Router
+  constructor(private readonly postsService: PostsService) {}
 
-  constructor() {
-    this.router = Router()
-
-    this.router.use(accessTokenGuard)
-
-    this.router.get('/')
-    this.router.post('/')
-    this.router.get('/:post_id')
-    this.router.patch('/:post_id')
-    this.router.delete('/:post_id')
-    this.router.post('/:post_id/likes')
-    this.router.delete('/:post_id/likes')
-    this.router.get('/:post_id/comments')
-    this.router.post('/:post_id/comments')
-    this.router.patch('/:post_id/comments/:comment_id')
-    this.router.delete('/:post_id/comments/:comment_id')
+  @Post()
+  create(@Body() createPostDto: CreatePostDto) {
+    return this.postsService.create(createPostDto);
   }
 
-  findAll() {}
-  findOne() {}
-  update() {}
-  create() {}
-  delete() {}
+  @Get()
+  findAll() {
+    return this.postsService.findAll();
+  }
 
-  createPostLike() {}
-  deletePostLike() {}
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.postsService.findOne(+id);
+  }
 
-  findAllPostComments() {}
-  createPostComment() {}
-  updatePostComment() {}
-  deletePostComment() {}
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto) {
+    return this.postsService.update(+id, updatePostDto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.postsService.remove(+id);
+  }
 }
-
-export const postsController = new PostsController()
